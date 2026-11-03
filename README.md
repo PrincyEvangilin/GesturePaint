@@ -34,7 +34,7 @@ The idea behind this project is to make digital painting feel natural. Instead o
 The app uses the HTML5 Canvas for drawing and the Pointer Events API to handle mouse, touch and pen input in one place. In hand mode, MediaPipe Hands detects 21 landmarks on your hand in real time. The app checks which fingers are extended to recognise each gesture, and smooths the fingertip movement so lines stay clean. Gestures like colour change and clear need to be held for a moment, so they do not trigger by accident.
 
 ## 🛠️ Built with
-HTML5 Canvas, Vanilla JavaScript, CSS3 and MediaPipe Hands
+HTML5 Canvas, Vanilla JavaScript, CSS3 and MediaPipe Hands, all in a single HTML file
 
 ## 🗺️ Future plans
 - Shapes tool
