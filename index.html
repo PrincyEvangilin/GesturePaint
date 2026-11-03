@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GesturePaint Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--g:rgba(18,20,34,.74);--b:rgba(255,255,255,.12);--t:#eef0fa;--a:#8b6cff;--a2:#35d0ff}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;color:var(--t);font-family:Outfit,system-ui,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+body{background:radial-gradient(circle,rgba(255,255,255,.08) 1px,transparent 1.6px) 0 0/26px 26px,#0b0d14}
+body.aurora{background:radial-gradient(circle,rgba(255,255,255,.08) 1px,transparent 1.6px),linear-gradient(125deg,#0b0d14,#1d1147,#0a3a52,#33104a,#0b0d14);background-size:26px 26px,400% 400%;animation:drift 22s ease infinite}
+body.paper{background:radial-gradient(circle,rgba(0,0,0,.09) 1px,transparent 1.6px) 0 0/26px 26px,#fdfdfb}
+@keyframes drift{0%,100%{background-position:0 0,0% 50%}50%{background-position:0 0,100% 50%}}
+canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+#overlay{pointer-events:none}
+.glass{background:var(--g);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--b);border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+#top{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:4px;align-items:center;padding:6px 8px 6px 16px;z-index:5}
+.logo{font-weight:700;font-size:17px;margin-right:10px;background:linear-gradient(90deg,var(--a2),var(--a),#ff6bd6);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+button.ib{width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--t);font-size:18px;cursor:pointer;transition:.15s}
+button.ib:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
+button.ib.on{background:linear-gradient(135deg,var(--a),var(--a2));box-shadow:0 4px 16px rgba(139,108,255,.5)}
+#dock{position:fixed;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;padding:8px;z-index:5}
+#panel{position:fixed;right:12px;top:68px;width:240px;padding:16px;z-index:5;display:flex;flex-direction:column;gap:16px;max-height:calc(100% - 84px);overflow:auto}
+#panel.hide{display:none}
+.sec h4{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin-bottom:9px;font-weight:600;display:flex;justify-content:space-between}
+.sw{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.sw button{aspect-ratio:1;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s}
+.sw button:hover{transform:scale(1.12)}
+.sw button.on{border-color:#fff;box-shadow:0 0 0 2px var(--a)}
+.row{display:flex;align-items:center;gap:10px;margin-top:10px}
+input[type=color]{width:38px;height:30px;border:none;background:none;cursor:pointer}
+input[type=range]{flex:1;accent-color:var(--a)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 12px;border-radius:999px;border:1px solid var(--b);background:rgba(255,255,255,.05);color:var(--t);font:500 12px Outfit,system-ui;cursor:pointer;transition:.15s}
+.chip:hover{background:rgba(255,255,255,.12)}
+.chip.on{background:linear-gradient(135deg,var(--a),var(--a2));border-color:transparent}
+#pbtn{position:fixed;right:12px;bottom:12px;z-index:6;width:48px;height:48px;border-radius:50%}
+#toast{position:fixed;top:72px;left:50%;transform:translate(-50%,-8px);z-index:8;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:500;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#camwrap{position:fixed;left:84px;bottom:14px;width:176px;height:132px;border-radius:14px;overflow:hidden;z-index:4;transform:scaleX(-1);display:none;border:1px solid var(--b);pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#camwrap video,#camwrap canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#hud{position:fixed;left:84px;bottom:154px;z-index:5;display:none;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;pointer-events:none}
+#modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(5,6,12,.65);z-index:9}
+#modal.show{display:grid}
+#modal .glass{padding:22px 26px;max-width:440px;width:92%;font-size:14px;line-height:1.75}
+#modal h2{font-size:20px;margin-bottom:8px}
+#modal b{color:var(--a2)}
+#modal kbd{background:rgba(255,255,255,.12);padding:1px 7px;border-radius:6px;font-size:12px}
+@media(max-width:720px){
+ .logo{display:none}
+ #panel{top:auto;bottom:70px;left:10px;right:10px;width:auto;max-height:48%}
+ #dock{top:auto;bottom:12px;left:12px;transform:none;flex-direction:row;max-width:calc(100% - 80px);overflow-x:auto}
+ #camwrap{left:auto;right:12px;top:70px;bottom:auto;width:130px;height:98px}
+ #hud{left:auto;right:12px;top:174px;bottom:auto}
+ button.ib{width:38px;height:38px;flex:none}
+}
+</style>
+</head>
+<body class="aurora">
+<canvas id="paper"></canvas>
+<canvas id="overlay"></canvas>
+<div id="camwrap"><video id="cam" playsinline muted></video><canvas id="camc" width="176" height="132"></canvas></div>
+<div id="hud" class="glass">🔍 Show your hand</div>
+
+<header id="top" class="glass">
+  <div class="logo">🎨 GesturePaint</div>
+  <button class="ib" id="bUndo" title="Undo (Z)">↶</button>
+  <button class="ib" id="bRedo" title="Redo (Y)">↷</button>
+  <button class="ib" id="bClear" title="Clear (C)">🗑</button>
+  <button class="ib" id="bSave" title="Save PNG (S)">⬇</button>
+  <button class="ib" id="bHand" title="Hand tracking mode">✋</button>
+  <button class="ib" id="bHelp" title="How to use">?</button>
+</header>
+
+<nav id="dock" class="glass"></nav>
+
+<aside id="panel" class="glass">
+  <div class="sec"><h4>Colour</h4><div class="sw" id="sw"></div>
+    <div class="row"><input type="color" id="cc" value="#5ce1ff"><span style="font-size:12px;opacity:.7">Custom colour</span></div></div>
+  <div class="sec"><h4>Brush size <span id="szv">10</span></h4><input type="range" id="sz" min="2" max="80" value="10" style="width:100%"></div>
+  <div class="sec"><h4>Symmetry</h4><div class="chips" id="symChips"></div></div>
+  <div class="sec"><h4>Canvas</h4><div class="chips" id="bgChips"></div></div>
+</aside>
+<button class="ib glass" id="pbtn" title="Toggle panel">🎛</button>
+
+<div id="toast"></div>
+
+<div id="modal"><div class="glass">
+  <h2>🎨 How to paint</h2>
+  <b>Touch / mouse / pen</b><br>
+  Drag to paint · pen pressure supported<br>
+  Two-finger pinch: <b>brush size</b> · wheel works too<br>
+  Two-finger tap: <b>undo</b> · three-finger tap: <b>clear</b><br>
+  Double-tap: <b>next colour</b><br>
+  <kbd>Z</kbd> undo <kbd>Y</kbd> redo <kbd>C</kbd> clear <kbd>S</kbd> save <kbd>1-7</kbd> brushes <kbd>[</kbd><kbd>]</kbd> size<br><br>
+  <b>Hand mode (webcam)</b><br>
+  ☝️ Only index finger up: <b>paint</b><br>
+  ✋ Open palm / any other pose: move cursor (no paint)<br>
+  ✌️ Peace sign, hold 0.6s: next colour<br>
+  🤟 Three fingers, hold 0.6s: next brush<br>
+  ✊ Fist, hold 1s: clear canvas<br><br>
+  <b>Tip:</b> turn on Symmetry for instant mandalas ✨
+  <div style="text-align:right;margin-top:10px"><button class="chip on" onclick="document.getElementById('modal').classList.remove('show')">Start painting</button></div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const paper = $('paper'), overlay = $('overlay');
+const ctx = paper.getContext('2d'), octx = overlay.getContext('2d');
+const dpr = Math.min(devicePixelRatio || 1, 2), TAU = Math.PI * 2;
+const st = { brush: 'pen', color: '#5ce1ff', size: 10, sym: 1, mirror: false, dyn: true, bg: 'aurora' };
+const palette = ['#ffffff', '#ff5c8a', '#ffb347', '#ffe66d', '#3ddc97', '#5ce1ff', '#8b6cff', '#c77dff', '#ff6b35', '#1c1c28'];
+const brushes = [['pen','✏️','Pen'],['calli','🖋️','Calligraphy'],['rainbow','🌈','Rainbow'],['neon','💡','Neon glow'],['spray','🎨','Spray'],['sparkle','✨','Sparkle'],['eraser','🧽','Eraser']];
+let W = 0, H = 0, hue = 0, handActive = false;
+
+/* ---------- canvas ---------- */
+function resize() {
+  let old = null;
+  if (W) { old = document.createElement('canvas'); old.width = paper.width; old.height = paper.height; old.getContext('2d').drawImage(paper, 0, 0); }
+  W = innerWidth; H = innerHeight;
+  paper.width = overlay.width = Math.round(W * dpr);
+  paper.height = overlay.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (old) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(old, 0, 0); ctx.restore(); }
+  cursor(-99, -99);
+}
+addEventListener('resize', resize);
+
+function toast(m, ms = 1600) {
+  const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ---------- history ---------- */
+const hist = [], redoS = [];
+const copy = () => { const c = document.createElement('canvas'); c.width = paper.width; c.height = paper.height; c.getContext('2d').drawImage(paper, 0, 0); return c; };
+const put = c => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, paper.width, paper.height); ctx.drawImage(c, 0, 0); ctx.restore(); };
+function snapshot() { hist.push(copy()); if (hist.length > 25) hist.shift(); redoS.length = 0; }
+function undo(silent) { const s = hist.pop(); if (!s) return; redoS.push(copy()); put(s); if (!silent) toast('Undo'); }
+function redo() { const s = redoS.pop(); if (!s) return; hist.push(copy()); put(s); toast('Redo'); }
+function clearAll() { snapshot(); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, paper.width, paper.height); ctx.restore(); toast('Canvas cleared'); }
+function save() {
+  const c = document.createElement('canvas'); c.width = paper.width; c.height = paper.height;
+  const x = c.getContext('2d'); x.fillStyle = st.bg === 'paper' ? '#fdfdfb' : '#0d0f1a'; x.fillRect(0, 0, c.width, c.height); x.drawImage(paper, 0, 0);
+  const a = document.createElement('a'); a.download = 'gesture-painting.png'; a.href = c.toDataURL('image/png'); a.click(); toast('Saved 📥');
+}
+
+/* ---------- settings ---------- */
+function setColor(c) { st.color = c; $('cc').value = c; [...$('sw').children].forEach(b => b.classList.toggle('on', b.dataset.c === c)); }
+function setSize(v) { st.size = Math.round(Math.max(2, Math.min(80, v))); $('sz').value = st.size; $('szv').textContent = st.size; }
+function setBrush(id) { st.brush = id; [...$('dock').children].forEach(b => b.classList.toggle('on', b.dataset.id === id)); }
+function nextColor() { setColor(palette[(palette.indexOf(st.color) + 1) % palette.length]); toast('Colour ' + st.color); }
+function nextBrush() { const i = brushes.findIndex(b => b[0] === st.brush); const n = brushes[(i + 1) % (brushes.length - 1)]; setBrush(n[0]); toast(n[1] + ' ' + n[2]); }
+function setBg(id) { st.bg = id; document.body.className = id === 'night' ? '' : id; [...$('bgChips').children].forEach(b => b.classList.toggle('on', b.dataset.id === id)); cursor(-99, -99); }
+
+brushes.forEach(([id, ic, name], i) => { const b = document.createElement('button'); b.className = 'ib'; b.textContent = ic; b.title = name + ' (' + (i + 1) + ')'; b.dataset.id = id; b.onclick = () => setBrush(id); $('dock').appendChild(b); });
+palette.forEach(c => { const b = document.createElement('button'); b.style.background = c; b.dataset.c = c; b.onclick = () => setColor(c); $('sw').appendChild(b); });
+[1, 2, 3, 4, 6, 8, 12].forEach(n => { const b = document.createElement('button'); b.className = 'chip' + (n === 1 ? ' on' : ''); b.textContent = n === 1 ? 'Off' : n + '×'; b.onclick = () => { st.sym = n; [...$('symChips').children].forEach(x => x.classList.toggle('on', x === b && true)); [...$('symChips').children].slice(-2).forEach(x => { if (x.dataset.t) x.classList.toggle('on', st[x.dataset.t]); }); cursor(-99, -99); }; $('symChips').appendChild(b); });
+[['mirror', '🪞 Mirror'], ['dyn', '〰 Ink flow']].forEach(([k, l]) => { const b = document.createElement('button'); b.className = 'chip' + (st[k] ? ' on' : ''); b.textContent = l; b.dataset.t = k; b.onclick = () => { st[k] = !st[k]; b.classList.toggle('on', st[k]); cursor(-99, -99); }; $('symChips').appendChild(b); });
+[['aurora', 'Aurora'], ['night', 'Night'], ['paper', 'Paper']].forEach(([id, l]) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = l; b.dataset.id = id; b.onclick = () => setBg(id); $('bgChips').appendChild(b); });
+$('cc').oninput = e => setColor(e.target.value);
+$('sz').oninput = e => setSize(+e.target.value);
+$('bUndo').onclick = () => undo(); $('bRedo').onclick = redo; $('bClear').onclick = clearAll; $('bSave').onclick = save;
+$('bHelp').onclick = () => $('modal').classList.add('show');
+$('pbtn').onclick = () => $('panel').classList.toggle('hide');
+if (innerWidth < 720) $('panel').classList.add('hide');
+
+/* ---------- brush engine ---------- */
+let last = null, mid = null, lw = 10, strokeT = 0;
+function sym(fn) {
+  if (st.brush === 'eraser') return fn();
+  const n = st.sym;
+  for (let k = 0; k < n; k++) for (let f = 0; f < (st.mirror ? 2 : 1); f++) {
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(k * TAU / n); if (f) ctx.scale(-1, 1); ctx.translate(-W / 2, -H / 2); fn(); ctx.restore();
+  }
+}
+function col() { if (st.brush === 'rainbow') { hue = (hue + 3) % 360; return `hsl(${hue},95%,60%)`; } return st.color; }
+function prep(c, w) {
+  ctx.lineCap = ctx.lineJoin = 'round'; ctx.lineWidth = w; ctx.strokeStyle = ctx.fillStyle = c;
+  if (st.brush === 'eraser') ctx.globalCompositeOperation = 'destination-out';
+  if (st.brush === 'neon') { ctx.shadowColor = c; ctx.shadowBlur = w * 1.8; }
+  if (st.brush === 'sparkle') { ctx.shadowColor = c; ctx.shadowBlur = 12; }
+}
+function scatter(x, y) {
+  const S = st.size;
+  if (st.brush === 'spray') { for (let i = 0; i < 22; i++) { const a = Math.random() * TAU, r = Math.random() * S * 1.5; ctx.fillRect(x + Math.cos(a) * r, y + Math.sin(a) * r, 1.6, 1.6); } }
+  else { for (let i = 0; i < 5; i++) { const a = Math.random() * TAU, r = Math.random() * S * 1.6, s = Math.random() * S * .22 + 1; ctx.globalAlpha = Math.random() * .7 + .3; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, s, 0, TAU); ctx.fill(); } }
+}
+function dab(x, y) {
+  const c = col();
+  sym(() => { ctx.save(); prep(c, st.size);
+    if (st.brush === 'spray' || st.brush === 'sparkle') scatter(x, y);
+    else { ctx.beginPath(); ctx.arc(x, y, st.size / 2, 0, TAU); ctx.fill(); }
+    ctx.restore(); });
+}
+function begin(x, y) { snapshot(); strokeT = performance.now(); last = { x, y, t: strokeT }; mid = { x, y }; lw = st.size; dab(x, y); }
+function end() { last = mid = null; }
+function move(x, y, p) {
+  if (!last) return;
+  const b = st.brush, S = st.size, now = performance.now();
+  if (b === 'spray' || b === 'sparkle') { dab(x, y); last = { x, y, t: now }; return; }
+  const d = Math.hypot(x - last.x, y - last.y); if (d < 0.8) return;
+  let w = S;
+  if (st.dyn && (b === 'pen' || b === 'rainbow' || b === 'neon')) {
+    const v = d / Math.max(1, now - last.t);
+    const tw = p != null ? S * (0.25 + p * 1.5) : S * Math.min(1.35, Math.max(.3, 1.45 - v * .45));
+    lw += (tw - lw) * .3; w = lw;
+  }
+  const c = col(), nm = { x: (last.x + x) / 2, y: (last.y + y) / 2 }, L = last;
+  if (b === 'calli') {
+    const nx = Math.cos(-.785) * S / 2, ny = Math.sin(-.785) * S / 2;
+    sym(() => { ctx.save(); ctx.fillStyle = ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(L.x + nx, L.y + ny); ctx.lineTo(x + nx, y + ny); ctx.lineTo(x - nx, y - ny); ctx.lineTo(L.x - nx, L.y - ny); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); });
+  } else {
+    const M = mid;
+    sym(() => { ctx.save(); prep(c, w); ctx.beginPath(); ctx.moveTo(M.x, M.y); ctx.quadraticCurveTo(L.x, L.y, nm.x, nm.y); ctx.stroke(); ctx.restore(); });
+  }
+  last = { x, y, t: now }; mid = nm;
+}
+
+/* ---------- overlay cursor + symmetry guides ---------- */
+function cursor(x, y, ring) {
+  octx.clearRect(0, 0, W, H);
+  const light = st.bg === 'paper', n = st.sym;
+  if (n > 1 || st.mirror) {
+    octx.save(); octx.strokeStyle = light ? 'rgba(0,0,0,.16)' : 'rgba(255,255,255,.16)'; octx.setLineDash([6, 9]);
+    const R = Math.hypot(W, H), cnt = st.mirror ? 2 * n : n, step = st.mirror ? Math.PI / n : TAU / n;
+    for (let k = 0; k < cnt; k++) { const a = -Math.PI / 2 + k * step; octx.beginPath(); octx.moveTo(W / 2, H / 2); octx.lineTo(W / 2 + Math.cos(a) * R, H / 2 + Math.sin(a) * R); octx.stroke(); }
+    octx.restore();
+  }
+  if (x < -50) return;
+  const r = Math.max(3, st.size / 2), dx = x - W / 2, dy = y - H / 2;
+  for (let k = 0; k < (st.brush === 'eraser' ? 1 : n); k++) for (let f = 0; f < (st.mirror && st.brush !== 'eraser' ? 2 : 1); f++) {
+    const ux = f ? -dx : dx, a = k * TAU / n, px = W / 2 + ux * Math.cos(a) - dy * Math.sin(a), py = H / 2 + ux * Math.sin(a) + dy * Math.cos(a);
+    octx.beginPath(); octx.arc(px, py, r, 0, TAU);
+    octx.strokeStyle = (k || f) ? (light ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.3)') : (ring || (light ? 'rgba(0,0,0,.6)' : 'rgba(255,255,255,.8)'));
+    octx.lineWidth = (k || f) ? 1 : 1.6; octx.stroke();
+  }
+}
+
+/* ---------- pointer gestures ---------- */
+const ptrs = new Map();
+let pinch0 = 0, size0 = 10, mStart = 0, mMoved = false, maxP = 0, lastTap = 0, lastTapPos = null, down = null;
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+paper.addEventListener('pointerdown', e => {
+  if (handActive && e.pointerType !== 'mouse') return;
+  paper.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  maxP = Math.max(maxP, ptrs.size);
+  if (ptrs.size === 1) { down = { t: performance.now(), x: e.clientX, y: e.clientY }; mMoved = false; maxP = 1; begin(e.clientX, e.clientY); }
+  else {
+    if (ptrs.size === 2 && last) { if (performance.now() - strokeT < 250) undo(true); end(); }
+    mStart = performance.now(); const [a, b] = [...ptrs.values()]; pinch0 = dist(a, b) || 1; size0 = st.size;
+  }
+});
+paper.addEventListener('pointermove', e => {
+  if (!handActive) cursor(e.clientX, e.clientY);
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  if (ptrs.size === 1) {
+    const pr = e.pointerType === 'pen' ? e.pressure : null, ev = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    (ev.length ? ev : [e]).forEach(v => move(v.clientX, v.clientY, pr));
+  } else if (ptrs.size === 2 && pinch0) {
+    const [a, b] = [...ptrs.values()], d = dist(a, b);
+    if (Math.abs(d - pinch0) > 10) mMoved = true;
+    setSize(size0 * d / pinch0);
+  }
+});
+function release(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (ptrs.size > 0) { pinch0 = 0; return; }
+  const now = performance.now(), quick = now - mStart < 350;
+  if (maxP === 2 && !mMoved && quick) undo();
+  else if (maxP >= 3 && quick) clearAll();
+  else if (maxP === 1 && down) {
+    const tap = now - down.t < 220 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8;
+    if (tap) {
+      if (lastTapPos && now - lastTap < 320 && Math.hypot(e.clientX - lastTapPos.x, e.clientY - lastTapPos.y) < 30) { undo(true); undo(true); nextColor(); lastTap = 0; }
+      else { lastTap = now; lastTapPos = { x: e.clientX, y: e.clientY }; }
+    }
+  }
+  end(); pinch0 = 0; maxP = 0;
+}
+paper.addEventListener('pointerup', release);
+paper.addEventListener('pointercancel', release);
+paper.addEventListener('pointerleave', () => { if (!ptrs.size && !handActive) cursor(-99, -99); });
+paper.addEventListener('wheel', e => { e.preventDefault(); setSize(st.size - Math.sign(e.deltaY) * 2); }, { passive: false });
+paper.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.shiftKey) undo(); else if (k === 'y' || (k === 'z' && e.shiftKey)) redo();
+  else if (k === 'c') clearAll(); else if (k === 's') { e.preventDefault(); save(); }
+  else if (k === '[') setSize(st.size - 3); else if (k === ']') setSize(st.size + 3);
+  else if (k >= '1' && k <= '7') setBrush(brushes[+k - 1][0]);
+  else if (k === '?') $('bHelp').click();
+});
+
+/* ---------- hand tracking ---------- */
+const video = $('cam'), wrap = $('camwrap'), camc = $('camc'), cctx = camc.getContext('2d'), hud = $('hud'), handBtn = $('bHand');
+let hands = null, stream = null, running = false, busy = false, handDrawing = false, smooth = null, lastVT = -1;
+const FING = [[8, 6, 5], [12, 10, 9], [16, 14, 13], [20, 18, 17]];   // tip, pip, mcp
+const fs = [false, false, false, false];                              // index, middle, ring, pinky extended
+const poseBuf = []; let pose = 'none', poseSince = 0, acted = false, actCool = 0;
+const HOLD = { peace: 600, three: 600, fist: 1000 };
+const LABEL = { point: '☝️ Painting', palm: '✋ Hovering', other: '🖐 Hovering', peace: '✌️ Hold: next colour', three: '🤟 Hold: next brush', fist: '✊ Hold: clear', none: '🔍 Show your hand' };
+const d2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+function classify(lm) {
+  FING.forEach(([t, , m], k) => {
+    const r = d2(lm[t], lm[0]) / (d2(lm[m], lm[0]) || .1);
+    if (r > 1.55) fs[k] = true; else if (r < 1.3) fs[k] = false;      // hysteresis: in-between keeps old state
+  });
+  const [i, m, r, p] = fs;
+  if (i && !m && !r && !p) return 'point';
+  if (i && m && r && p) return 'palm';
+  if (i && m && !r && !p) return 'peace';
+  if (i && m && r && !p) return 'three';
+  if (!i && !m && !r && !p) return 'fist';
+  return 'other';
+}
+function setPose(c, now) {
+  poseBuf.push(c); if (poseBuf.length > 5) poseBuf.shift();
+  const cnt = {}; poseBuf.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
+  let best = pose, bc = 0; for (const k in cnt) if (cnt[k] > bc) { best = k; bc = cnt[k]; }
+  if (bc >= 3 && best !== pose) { pose = best; poseSince = now; acted = false; }
+}
+function drawPreview(lm) {
+  cctx.clearRect(0, 0, 176, 132);
+  if (!lm) return;
+  cctx.strokeStyle = 'rgba(139,108,255,.9)'; cctx.lineWidth = 2;
+  [[0,1,2,3,4],[0,5,6,7,8],[9,10,11,12],[13,14,15,16],[0,17,18,19,20],[5,9,13,17]].forEach(ch => { cctx.beginPath(); ch.forEach((n, j) => j ? cctx.lineTo(lm[n].x * 176, lm[n].y * 132) : cctx.moveTo(lm[n].x * 176, lm[n].y * 132)); cctx.stroke(); });
+  cctx.fillStyle = '#35d0ff'; lm.forEach(q => { cctx.beginPath(); cctx.arc(q.x * 176, q.y * 132, 2.5, 0, TAU); cctx.fill(); });
+  cctx.fillStyle = '#ff6bd6'; cctx.beginPath(); cctx.arc(lm[8].x * 176, lm[8].y * 132, 5, 0, TAU); cctx.fill();
+}
+function lost() {
+  if (handDrawing) { end(); handDrawing = false; }
+  pose = 'none'; poseBuf.length = 0; smooth = null; drawPreview(null); cursor(-99, -99); hud.textContent = LABEL.none;
+}
+let missed = 0;
+function onResults(res) {
+  const lm = res.multiHandLandmarks && res.multiHandLandmarks[0], now = performance.now();
+  if (!lm) { if (++missed > 5) lost(); return; }
+  missed = 0;
+  drawPreview(lm);
+  // index fingertip -> screen (mirrored, with margin so edges are reachable)
+  const tx = Math.min(1, Math.max(0, ((1 - lm[8].x) - .1) / .8)) * W, ty = Math.min(1, Math.max(0, (lm[8].y - .1) / .8)) * H;
+  if (!smooth) smooth = { x: tx, y: ty };
+  else { const a = Math.min(.9, .15 + Math.hypot(tx - smooth.x, ty - smooth.y) / 140); smooth.x += (tx - smooth.x) * a; smooth.y += (ty - smooth.y) * a; }
+  setPose(classify(lm), now);
+
+  // painting only while pointing with the index finger
+  if (pose === 'point') { if (!handDrawing) { begin(smooth.x, smooth.y); handDrawing = true; } else move(smooth.x, smooth.y, null); }
+  else if (handDrawing) { end(); handDrawing = false; }
+
+  cursor(smooth.x, smooth.y, pose === 'point' ? st.color : null);
+  hud.textContent = LABEL[pose] || LABEL.other;
+
+  // hold-to-trigger actions with a progress ring
+  if (HOLD[pose] && !acted) {
+    const prog = Math.min(1, (now - poseSince) / HOLD[pose]);
+    octx.beginPath(); octx.arc(smooth.x, smooth.y, 28, -1.57, -1.57 + TAU * prog); octx.strokeStyle = pose === 'fist' ? '#ff4d6d' : '#35d0ff'; octx.lineWidth = 4; octx.stroke();
+    if (prog >= 1 && now > actCool) {
+      if (pose === 'peace') nextColor(); else if (pose === 'three') nextBrush(); else if (pose === 'fist') clearAll();
+      acted = true; actCool = now + 900;
+    }
+  }
+}
+async function loop() {
+  if (!running) return;
+  if (!busy && video.readyState >= 2 && video.currentTime !== lastVT) { lastVT = video.currentTime; busy = true; try { await hands.send({ image: video }); } catch (e) { console.error(e); } busy = false; }
+  requestAnimationFrame(loop);
+}
+async function startHand() {
+  if (!window.Hands) { toast('Hand-tracking library failed to load. Check internet.', 3500); return false; }
+  if (!window.isSecureContext) { toast('Camera needs https:// or http://localhost — run a local server (python -m http.server).', 5500); return false; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Camera not supported in this browser.', 3500); return false; }
+  try {
+    toast('Starting camera…', 9000);
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+    video.srcObject = stream; await video.play(); wrap.style.display = 'block'; hud.style.display = 'block';
+    if (!hands) {
+      hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}` });
+      hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: .6, minTrackingConfidence: .5 });
+      hands.onResults(onResults); toast('Loading hand model…', 15000); await hands.initialize();
+    }
+  } catch (err) { console.error(err); toast(err && err.name === 'NotAllowedError' ? 'Camera permission denied.' : 'Hand tracking failed: ' + (err.message || err), 4000); stopHand(); return false; }
+  running = true; handActive = true; pose = 'none'; poseBuf.length = 0; hud.textContent = LABEL.none; loop();
+  toast('Hand mode on — point with your index finger to paint ☝️', 3200); return true;
+}
+function stopHand() {
+  running = false; handActive = false; if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; video.srcObject = null; wrap.style.display = 'none'; hud.style.display = 'none';
+  end(); handDrawing = false; smooth = null; cursor(-99, -99);
+}
+handBtn.onclick = async () => {
+  if (handBtn.disabled) return;
+  if (!running) { handBtn.disabled = true; const ok = await startHand(); handBtn.disabled = false; handBtn.classList.toggle('on', ok); }
+  else { stopHand(); handBtn.classList.remove('on'); }
+};
+
+/* ---------- init ---------- */
+resize(); setColor(st.color); setBrush('pen'); setBg('aurora');
+$('symChips').children[0].classList.add('on');
+$('modal').classList.add('show');
+})();
+</script>
+</body>
+</html>
